@@ -79,6 +79,8 @@ if [ ${device:0:7} == "/dev/sd" -a $mountpoint != "$SD_MOUNTPOINT" -a -e "$mount
         # Organize the photos in a folder for each SD card
         target_dir="$mountpoint$PHOTO_DIR"/"$sd_uuid"
         mkdir -p $target_dir
+        # Ensure that no existing rsync scripts are running
+        killall rsync
         # Copy the files from the sd card to the target dir, removing the source files once copied.
         # Uses filename and size to check for duplicates
         rsync -vrum --remove-source-files --size-only --log-file /tmp/rsync_log "$SD_MOUNTPOINT"/DCIM "$target_dir"/
