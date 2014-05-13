@@ -104,5 +104,7 @@ cat <<'EOF' >> /etc/udev/script/remove_usb_storage.sh
 # Kill the rsync process if the USB drive or SD card is removed
 killall rsync
 #END_MOD
-EOF#Persist configuration changes
+EOF
+#Persist configuration changes
 /usr/sbin/etc_tools p
+
