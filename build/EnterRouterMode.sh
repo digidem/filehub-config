@@ -86,7 +86,7 @@ if [ ${device:0:7} == "/dev/sd" -a $mountpoint != "$SD_MOUNTPOINT" -a -e "$mount
         killall rsync
         # Copy the files from the sd card to the target dir, removing the source files once copied.
         # Uses filename and size to check for duplicates
-        rsync -vrum --remove-source-files --size-only --log-file /tmp/rsync_log "$SD_MOUNTPOINT"/DCIM "$target_dir"/
+        rsync -vrm --remove-source-files --size-only --log-file /tmp/rsync_log "$SD_MOUNTPOINT"/DCIM/ "$target_dir"/
         if [ $? -eq 0 ]; then
                 find "$SD_MOUNTPOINT"/DCIM/ -d -type f -regex "$MEDIA_REGEX" -exec rm {} \;
                 find "$SD_MOUNTPOINT"/DCIM/ -d -type d -exec rmdir {} \;
