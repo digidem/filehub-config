@@ -23,6 +23,7 @@ touch /tmp/rsyncing
 SD_MOUNTPOINT=/data/UsbDisk1/Volume1
 PHOTO_DIR=/monitoreo/fotos
 CONFIG_DIR=/monitoreo/config
+MEDIA_REGEX=.*\.\(jpg\|gif\|png\|jpeg\|mov\|avi\|wav\|mp3\|aif\|wma\|wmv\|asx\|asf\|m4v\|mp4\|mpg\|3gp\|3g2\|crw\|cr2\|nef\|dng\|mdc\|orf\|sr2\|srf\)
 
 # Check if an SD card is inserted (always mounted at the same mount point on the Rav Filehub)
 check_sdcard() {
@@ -62,6 +63,10 @@ if [ ${device:0:7} == "/dev/sd" -a $mountpoint != "$SD_MOUNTPOINT" -a -e "$mount
         # Copy the files from the sd card to the target dir, removing the source files once copied.
         # Uses filename and size to check for duplicates
         rsync -vrum --remove-source-files --size-only --log-file /tmp/rsync_log "$SD_MOUNTPOINT"/DCIM "$target_dir"/
+        if [ $? -eq 0 ]; then
+                find "$SD_MOUNTPOINT"/DCIM/ -d -type f -regex "$MEDIA_REGEX" -exec rm {} \;
+                find "$SD_MOUNTPOINT"/DCIM/ -d -type d -exec rmdir {} \;
+        fi
 fi
 done < /proc/mounts
 
