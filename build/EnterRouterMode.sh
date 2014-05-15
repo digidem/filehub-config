@@ -100,7 +100,11 @@ sync
 echo "Backup complete" >> /tmp/usb_add_info
 
 rm /tmp/rsyncing
+exit
 EOF
+
+# Make executable
+chmod +x /etc/udev/script/usb_backup.sh
 
 # Kill rsync when a USB drive is removed
 
