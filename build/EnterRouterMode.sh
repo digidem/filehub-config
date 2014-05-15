@@ -32,7 +32,7 @@ sed -i '/^exit$/d' /etc/udev/script/add_usb_storage.sh
 cat <<'EOF' >> /etc/udev/script/add_usb_storage.sh
 #START_MOD
 # Run backup script
-/etc/udev/script/usb_backup.sh
+/etc/udev/script/usb_backup.sh &
 exit
 #END_MOD
 EOF
