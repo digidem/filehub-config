@@ -16,6 +16,8 @@ EOF
 cat <<'EOF' > /etc/udev/script/usb_backup.sh
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 
+echo "running backup" >> /tmp/usb_add_info
+
 touch /tmp/rsyncing
 
 SD_MOUNTPOINT=/data/UsbDisk1/Volume1
@@ -65,6 +67,8 @@ done < /proc/mounts
 
 # Write memory buffer to disk
 sync
+
+echo "Backup complete" >> /tmp/usb_add_info
 
 rm /tmp/rsyncing
 EOF
