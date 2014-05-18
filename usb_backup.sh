@@ -55,17 +55,35 @@ while read device mountpoint fstype remainder; do
 if [ ${device:0:7} == "/dev/sd" -a $mountpoint != "$SD_MOUNTPOINT" -a -e "$mountpoint$CONFIG_DIR" -a -e "$mountpoint$CONFIG_DIR"/rsync ];then
         # Add the config dir (containing rsync binary) to the PATH
         export PATH="$mountpoint$CONFIG_DIR":$PATH
-        # Organize the photos in a folder for each SD card
-        target_dir="$mountpoint$PHOTO_DIR"/"$sd_uuid"
+        # Get the date of the latest file on the SD card
+        last_file="$SD_MOUNTPOINT"/DCIM/`ls -1c "$SD_MOUNTPOINT"/DCIM/ | tail -1`
+        last_file_date=`stat "$last_file" | grep Modify | sed -e 's/Modify: //' -e 's/[:| ]/_/g' | cut -d . -f 1`
+        # Organize the photos in a folder for each SD card by UUID,
+        # organize in subfolders by date of latest photo being imported
+        target_dir="$mountpoint$PHOTO_DIR"/"$sd_uuid"/"$last_file_date"
+        incoming_dir="$mountpoint$PHOTO_DIR"/incoming/"$sd_uuid"
         mkdir -p $target_dir
+        mkdir -p $incoming_dir
         # Ensure that no existing rsync scripts are running
         killall rsync
-        # Copy the files from the sd card to the target dir, removing the source files once copied.
+        # Copy the files from the sd card to the target dir, 
+        # removing the source files once copied.
         # Uses filename and size to check for duplicates
-        rsync -vrm --remove-source-files --size-only --log-file /tmp/rsync_log "$SD_MOUNTPOINT"/DCIM/ "$target_dir"/
+        echo "Backing up SD card to $incoming_dir" >> /tmp/usb_add_info
+        rsync -vrm --size-only --log-file /tmp/rsync_log "$SD_MOUNTPOINT"/DCIM/ "$incoming_dir"/
         if [ $? -eq 0 ]; then
-                find "$SD_MOUNTPOINT"/DCIM/ -d -type f -regex "$MEDIA_REGEX" -exec rm {} \;
-                find "$SD_MOUNTPOINT"/DCIM/ -d -type d -exec rmdir {} \;
+                echo "Moving copied files to $target_dir" >> /tmp/usb_add_info
+                rm -rf "$target_dir"
+                mv -f "$incoming_dir" "$target_dir" >> /tmp/usb_add_info 2>&1
+                if  [ $? -eq 0 ]; then
+                        find "$SD_MOUNTPOINT"/DCIM/ -depth -type f -regex "$MEDIA_REGEX" -exec rm {} \;
+                        find "$SD_MOUNTPOINT"/DCIM/ -depth -type d -exec rmdir {} \;
+                        echo "Backup complete" >> /tmp/usb_add_info
+                else
+                        echo "Didn't finish moving files from incoming" >> /tmp/usb_add_info
+                fi
+        else
+                echo "Backup was interrupted" >> /tmp/usb_add_info
         fi
 fi
 done < /proc/mounts
