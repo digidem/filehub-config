@@ -44,7 +44,7 @@ touch /tmp/rsyncing
 
 SD_MOUNTPOINT=/data/UsbDisk1/Volume1
 PHOTO_DIR=/monitoreo/fotos
-CONFIG_DIR=/monitoreo/config
+CONFIG_DIR=/monitoreo/no_tocar
 MEDIA_REGEX=".*\.\(jpg\|gif\|png\|jpeg\|mov\|avi\|wav\|mp3\|aif\|wma\|wmv\|asx\|asf\|m4v\|mp4\|mpg\|3gp\|3g2\|crw\|cr2\|nef\|dng\|mdc\|orf\|sr2\|srf\)"
 
 # Check if an SD card is inserted (always mounted at the same mount point on the Rav Filehub)
@@ -95,10 +95,11 @@ if [ ${device:0:7} == "/dev/sd" -a $mountpoint != "$SD_MOUNTPOINT" -a -e "$mount
         rsync -vrm --size-only --log-file /tmp/rsync_log "$SD_MOUNTPOINT"/DCIM/ "$incoming_dir"/
         if [ $? -eq 0 ]; then
                 echo "Moving copied files to $target_dir" >> /tmp/usb_add_info
-                mv -rf "$incoming_dir"/* "$target_dir" >> /tmp/usb_add_info 2>&1
+                rm -rf "$target_dir"
+                mv -f "$incoming_dir" "$target_dir" >> /tmp/usb_add_info 2>&1
                 if  [ $? -eq 0 ]; then
-                        find "$SD_MOUNTPOINT"/DCIM/ -d -type f -regex "$MEDIA_REGEX" -exec rm {} \;
-                        find "$SD_MOUNTPOINT"/DCIM/ -d -type d -exec rmdir {} \;
+                        find "$SD_MOUNTPOINT"/DCIM/ -depth -type f -regex "$MEDIA_REGEX" -exec rm {} \;
+                        find "$SD_MOUNTPOINT"/DCIM/ -depth -type d -exec rmdir {} \;
                         echo "Backup complete" >> /tmp/usb_add_info
                 else
                         echo "Didn't finish moving files from incoming" >> /tmp/usb_add_info
