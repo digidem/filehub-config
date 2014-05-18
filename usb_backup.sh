@@ -22,8 +22,8 @@ touch /tmp/rsyncing
 
 SD_MOUNTPOINT=/data/UsbDisk1/Volume1
 PHOTO_DIR=/monitoreo/fotos
-CONFIG_DIR=/monitoreo/config
-MEDIA_REGEX=.*\.\(jpg\|gif\|png\|jpeg\|mov\|avi\|wav\|mp3\|aif\|wma\|wmv\|asx\|asf\|m4v\|mp4\|mpg\|3gp\|3g2\|crw\|cr2\|nef\|dng\|mdc\|orf\|sr2\|srf\)
+CONFIG_DIR=/monitoreo/no_tocar
+MEDIA_REGEX=".*\.\(jpg\|gif\|png\|jpeg\|mov\|avi\|wav\|mp3\|aif\|wma\|wmv\|asx\|asf\|m4v\|mp4\|mpg\|3gp\|3g2\|crw\|cr2\|nef\|dng\|mdc\|orf\|sr2\|srf\)"
 
 # Check if an SD card is inserted (always mounted at the same mount point on the Rav Filehub)
 check_sdcard() {
