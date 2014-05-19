@@ -102,13 +102,14 @@ if [ $sdcard -eq 1 -a $storedrive -eq 1 ];then
         # organize in subfolders by date of latest photo being imported
         target_dir="$store_mountpoint$PHOTO_DIR"/"$sd_uuid"/"$last_file_date"
         incoming_dir="$store_mountpoint$PHOTO_DIR"/incoming/"$sd_uuid"
+        partial_dir="$store_mountpoint$PHOTO_DIR"/incoming/.partial
         mkdir -p $target_dir
         mkdir -p $incoming_dir
         # Copy the files from the sd card to the target dir, 
         # removing the source files once copied.
         # Uses filename and size to check for duplicates
         echo "Copying SD card to $incoming_dir" >> /tmp/usb_add_info
-        rsync -vrm --size-only --log-file /tmp/rsync_log --exclude ".*" "$SD_MOUNTPOINT"/DCIM/ "$incoming_dir"
+        rsync -vrm --size-only --log-file /tmp/rsync_log --partial-dir "$partial_dir" --exclude ".?*" "$SD_MOUNTPOINT"/DCIM/ "$incoming_dir"
         if [ $? -eq 0 ]; then
                 echo "Moving copied files to $target_dir" >> /tmp/usb_add_info
                 rm -rf "$target_dir"
@@ -130,8 +131,9 @@ fi
 if [ $storedrive -eq 1 -a $backupdrive -eq 1 -a "$backup_id" == "$store_id" ]; then
         source_dir="$store_mountpoint$STORE_DIR"
         target_dir="$backup_mountpoint$BACKUP_DIR"
+        partial_dir="$store_mountpoint$PHOTO_DIR"/incoming/.partial
         echo "Backing up data store to $target_dir" >> /tmp/usb_add_info
-        rsync -vrm --size-only --delete-during --exclude ".*" --exclude "swapfile" --log-file /tmp/rsync_log "$source_dir"/ "$target_dir"
+        rsync -vrm --size-only --delete-during --exclude ".?*" --partial-dir "$partial_dir" --exclude "swapfile" --log-file /tmp/rsync_log "$source_dir"/ "$target_dir"
         if  [ $? -eq 0 ]; then
                 echo "Backup complete" >> /tmp/usb_add_info
         else
