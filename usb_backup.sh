@@ -116,6 +116,7 @@ if [ $sdcard -eq 1 -a $storedrive -eq 1 ];then
                 mv -f "$incoming_dir" "$target_dir" >> /tmp/usb_add_info 2>&1
                 if  [ $? -eq 0 ]; then
                         find "$SD_MOUNTPOINT"/DCIM/ -depth -type f -regex "$MEDIA_REGEX" -exec rm {} \;
+                        find "$SD_MOUNTPOINT"/DCIM/ -depth -type f -iname ".?*" -exec rm {} \;
                         find "$SD_MOUNTPOINT"/DCIM/ -depth -type d -exec rmdir {} \;
                         echo "SD copy complete" >> /tmp/usb_add_info
                 else
