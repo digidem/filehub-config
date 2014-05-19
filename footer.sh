@@ -6,4 +6,4 @@ rm -- "$0"
 
 #Shutdown device
 
-/sbin/shutdown h
+# /sbin/shutdown h
