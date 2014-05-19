@@ -34,6 +34,10 @@ usb1/1-1/1-1.2/1-1.2.1/1-1.2.1.5 UsbDisk 6
 usb1/1-1/1-1.2/1-1.2.1/1-1.2.1.6 UsbDisk 7
 usb1/1-1/1-1.2/1-1.2.1/1-1.2.1.7 UsbDisk 8
 usb1/1-1/1-1.2/1-1.2.1/1-1.2.1.8 UsbDisk 9
+usb1/1-1/1-1.2/1-1.2.1 UsbDisk 2
+usb1/1-1/1-1.2/1-1.2.2 UsbDisk 3
+usb1/1-1/1-1.2/1-1.2.3 UsbDisk 4
+usb1/1-1/1-1.2/1-1.2.4 UsbDisk 5
 usb1/1-1/1-1.1 UsbDisk 1
 usb1/1-1/1-1.2 UsbDisk 2
 usb1/1-1/1-1.3 UsbDisk 3
@@ -59,7 +63,13 @@ EOF
 cat <<'EOF' > /etc/udev/script/usb_backup.sh
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 
-touch /tmp/rsyncing
+# Kill an existing backup process if running 
+# (this can happen if you insert two disks one after the other)
+if [ -e /tmp/backup.pid ]; then
+        kill $(cat /tmp/backup.pid)
+        sleep 1
+fi
+echo $$ > /tmp/backup.pid
 
 SD_MOUNTPOINT=/data/UsbDisk1/Volume1
 STORE_DIR=/monitoreo
@@ -139,21 +149,21 @@ if [ $sdcard -eq 1 -a $storedrive -eq 1 ];then
         # organize in subfolders by date of latest photo being imported
         target_dir="$store_mountpoint$PHOTO_DIR"/"$sd_uuid"/"$last_file_date"
         incoming_dir="$store_mountpoint$PHOTO_DIR"/incoming/"$sd_uuid"
+        partial_dir="$store_mountpoint$PHOTO_DIR"/incoming/.partial
         mkdir -p $target_dir
         mkdir -p $incoming_dir
-        # Ensure that no existing rsync scripts are running
-        killall rsync
         # Copy the files from the sd card to the target dir, 
         # removing the source files once copied.
         # Uses filename and size to check for duplicates
         echo "Copying SD card to $incoming_dir" >> /tmp/usb_add_info
-        rsync -vrm --size-only --log-file /tmp/rsync_log --exclude ".*" "$SD_MOUNTPOINT"/DCIM/ "$incoming_dir"
+        rsync -vrm --size-only --log-file /tmp/rsync_log --partial-dir "$partial_dir" --exclude ".?*" "$SD_MOUNTPOINT"/DCIM/ "$incoming_dir"
         if [ $? -eq 0 ]; then
                 echo "Moving copied files to $target_dir" >> /tmp/usb_add_info
                 rm -rf "$target_dir"
                 mv -f "$incoming_dir" "$target_dir" >> /tmp/usb_add_info 2>&1
                 if  [ $? -eq 0 ]; then
                         find "$SD_MOUNTPOINT"/DCIM/ -depth -type f -regex "$MEDIA_REGEX" -exec rm {} \;
+                        find "$SD_MOUNTPOINT"/DCIM/ -depth -type f -iname ".?*" -exec rm {} \;
                         find "$SD_MOUNTPOINT"/DCIM/ -depth -type d -exec rmdir {} \;
                         echo "SD copy complete" >> /tmp/usb_add_info
                 else
@@ -169,8 +179,9 @@ fi
 if [ $storedrive -eq 1 -a $backupdrive -eq 1 -a "$backup_id" == "$store_id" ]; then
         source_dir="$store_mountpoint$STORE_DIR"
         target_dir="$backup_mountpoint$BACKUP_DIR"
+        partial_dir="$store_mountpoint$PHOTO_DIR"/incoming/.partial
         echo "Backing up data store to $target_dir" >> /tmp/usb_add_info
-        rsync -vrm --size-only --delete-during --exclude ".*" --log-file /tmp/rsync_log "$source_dir"/ "$target_dir"
+        rsync -vrm --size-only --delete-during --exclude ".?*" --partial-dir "$partial_dir" --exclude "swapfile" --log-file /tmp/rsync_log "$source_dir"/ "$target_dir"
         if  [ $? -eq 0 ]; then
                 echo "Backup complete" >> /tmp/usb_add_info
         else
@@ -181,7 +192,7 @@ fi
 # Write memory buffer to disk
 sync
 
-rm /tmp/rsyncing
+rm /tmp/backup.pid
 exit
 EOF
 
@@ -197,7 +208,10 @@ sed -i '/#START_MOD/,/#END_MOD/d' /etc/udev/script/remove_usb_storage.sh
 cat <<'EOF' >> /etc/udev/script/remove_usb_storage.sh 
 #START_MOD
 # Kill the rsync process if the USB drive or SD card is removed
-killall rsync
+if [ -e /tmp/backup.pid ]; then
+        kill $(cat /tmp/backup.pid)
+        rm /tmp/backup.pid
+fi
 
 # Turn off swap if the store drive is removed
 STORE_DIR=/monitoreo
@@ -220,6 +234,24 @@ if [ $? -eq 0 ]; then
 fi
 
 #END_MOD
+EOF
+# Add a swapfile on the data store drive 
+# (rsync needs this for large file copies)
+
+cat <<'EOF' > /etc/init.d/swap
+STORE_DIR=/monitoreo
+CONFIG_DIR="$STORE_DIR"/no_tocar
+
+while read device mountpoint fstype remainder; do
+    if [ ${device:0:7} == "/dev/sd" -a -e "$mountpoint$CONFIG_DIR" ];then
+            local swapfile
+            swapfile="$mountpoint$CONFIG_DIR"/swapfile
+            if [ ! -e "$swapfile" ]; then
+                dd if=/dev/zero of="$swapfile" bs=1024 count=65536
+            fi
+            swapon "$swapfile"
+    fi
+done < /proc/mounts
 EOF
 #Persist configuration changes
 /usr/sbin/etc_tools p
