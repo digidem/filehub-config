@@ -8,7 +8,10 @@ sed -i '/#START_MOD/,/#END_MOD/d' /etc/udev/script/remove_usb_storage.sh
 cat <<'EOF' >> /etc/udev/script/remove_usb_storage.sh 
 #START_MOD
 # Kill the rsync process if the USB drive or SD card is removed
-killall rsync
+if [ -e /tmp/backup.pid ]; then
+        kill $(cat /tmp/backup.pid)
+        rm /tmp/backup.pid
+fi
 
 # Turn off swap if the store drive is removed
 STORE_DIR=/monitoreo

@@ -16,7 +16,13 @@ EOF
 cat <<'EOF' > /etc/udev/script/usb_backup.sh
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 
-touch /tmp/rsyncing
+# Kill an existing backup process if running 
+# (this can happen if you insert two disks one after the other)
+if [ -e /tmp/backup.pid ]; then
+        kill $(cat /tmp/backup.pid)
+        sleep 1
+fi
+echo $$ > /tmp/backup.pid
 
 SD_MOUNTPOINT=/data/UsbDisk1/Volume1
 STORE_DIR=/monitoreo
@@ -98,8 +104,6 @@ if [ $sdcard -eq 1 -a $storedrive -eq 1 ];then
         incoming_dir="$store_mountpoint$PHOTO_DIR"/incoming/"$sd_uuid"
         mkdir -p $target_dir
         mkdir -p $incoming_dir
-        # Ensure that no existing rsync scripts are running
-        killall rsync
         # Copy the files from the sd card to the target dir, 
         # removing the source files once copied.
         # Uses filename and size to check for duplicates
@@ -138,7 +142,7 @@ fi
 # Write memory buffer to disk
 sync
 
-rm /tmp/rsyncing
+rm /tmp/backup.pid
 exit
 EOF
 
