@@ -111,16 +111,22 @@ if [ $sdcard -eq 1 -a $storedrive -eq 1 ];then
         echo "Copying SD card to $incoming_dir" >> /tmp/usb_add_info
         rsync -vrm --size-only --log-file /tmp/rsync_log --partial-dir "$partial_dir" --exclude ".?*" "$SD_MOUNTPOINT"/DCIM/ "$incoming_dir"
         if [ $? -eq 0 ]; then
-                echo "Moving copied files to $target_dir" >> /tmp/usb_add_info
-                rm -rf "$target_dir"
-                mv -f "$incoming_dir" "$target_dir" >> /tmp/usb_add_info 2>&1
-                if  [ $? -eq 0 ]; then
-                        find "$SD_MOUNTPOINT"/DCIM/ -depth -type f -regex "$MEDIA_REGEX" -exec rm {} \;
-                        find "$SD_MOUNTPOINT"/DCIM/ -depth -type f -iname ".?*" -exec rm {} \;
-                        find "$SD_MOUNTPOINT"/DCIM/ -depth -type d -exec rmdir {} \;
-                        echo "SD copy complete" >> /tmp/usb_add_info
+                # Only continue if the incoming_dir is not empty
+                rmdir "$incoming_dir"
+                if [ $? -eq 1 ]; then
+                        echo "Moving copied files to $target_dir" >> /tmp/usb_add_info
+                        rm -rf "$target_dir"
+                        mv -f "$incoming_dir" "$target_dir" >> /tmp/usb_add_info 2>&1
+                        if  [ $? -eq 0 ]; then
+                                find "$SD_MOUNTPOINT"/DCIM -depth -type f -regex "$MEDIA_REGEX" -exec rm {} \;
+                                find "$SD_MOUNTPOINT"/DCIM -depth -type f -iname ".*" -exec rm {} \;
+                                find "$SD_MOUNTPOINT"/DCIM/* -depth -type d -exec rmdir {} \;
+                                echo "SD copy complete" >> /tmp/usb_add_info
+                        else
+                                echo "Didn't finish moving files from incoming" >> /tmp/usb_add_info
+                        fi
                 else
-                        echo "Didn't finish moving files from incoming" >> /tmp/usb_add_info
+                        echo "No new files found on SD Card" >> /tmp/usb_add_info
                 fi
         else
                 echo "SD copy was interrupted" >> /tmp/usb_add_info
