@@ -10,6 +10,7 @@ cat <<'EOF' >> /etc/udev/script/remove_usb_storage.sh
 # Kill the rsync process if the USB drive or SD card is removed
 if [ -e /tmp/backup.pid ]; then
         kill $(cat /tmp/backup.pid)
+        killall rsync
         rm /tmp/backup.pid
 fi
 

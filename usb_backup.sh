@@ -20,6 +20,7 @@ export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 # (this can happen if you insert two disks one after the other)
 if [ -e /tmp/backup.pid ]; then
         kill $(cat /tmp/backup.pid)
+        killall rsync
         sleep 1
 fi
 echo $$ > /tmp/backup.pid
