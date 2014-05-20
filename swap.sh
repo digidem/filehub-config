@@ -1,6 +1,8 @@
 # Add a swapfile on the data store drive 
 # (rsync needs this for large file copies)
 
+sed -i 's/SWAP=noswap/SWAP=swap/' /etc/firmware
+
 cat <<'EOF' > /etc/init.d/swap
 STORE_DIR=/monitoreo
 CONFIG_DIR="$STORE_DIR"/no_tocar
