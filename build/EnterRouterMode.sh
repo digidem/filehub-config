@@ -67,6 +67,7 @@ export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 # (this can happen if you insert two disks one after the other)
 if [ -e /tmp/backup.pid ]; then
         kill $(cat /tmp/backup.pid)
+        killall rsync
         sleep 1
 fi
 echo $$ > /tmp/backup.pid
@@ -158,16 +159,22 @@ if [ $sdcard -eq 1 -a $storedrive -eq 1 ];then
         echo "Copying SD card to $incoming_dir" >> /tmp/usb_add_info
         rsync -vrm --size-only --log-file /tmp/rsync_log --partial-dir "$partial_dir" --exclude ".?*" "$SD_MOUNTPOINT"/DCIM/ "$incoming_dir"
         if [ $? -eq 0 ]; then
-                echo "Moving copied files to $target_dir" >> /tmp/usb_add_info
-                rm -rf "$target_dir"
-                mv -f "$incoming_dir" "$target_dir" >> /tmp/usb_add_info 2>&1
-                if  [ $? -eq 0 ]; then
-                        find "$SD_MOUNTPOINT"/DCIM/ -depth -type f -regex "$MEDIA_REGEX" -exec rm {} \;
-                        find "$SD_MOUNTPOINT"/DCIM/ -depth -type f -iname ".?*" -exec rm {} \;
-                        find "$SD_MOUNTPOINT"/DCIM/ -depth -type d -exec rmdir {} \;
-                        echo "SD copy complete" >> /tmp/usb_add_info
+                # Only continue if the incoming_dir is not empty
+                rmdir "$incoming_dir"
+                if [ $? -eq 1 ]; then
+                        echo "Moving copied files to $target_dir" >> /tmp/usb_add_info
+                        rm -rf "$target_dir"
+                        mv -f "$incoming_dir" "$target_dir" >> /tmp/usb_add_info 2>&1
+                        if  [ $? -eq 0 ]; then
+                                find "$SD_MOUNTPOINT"/DCIM -depth -type f -regex "$MEDIA_REGEX" -exec rm {} \;
+                                find "$SD_MOUNTPOINT"/DCIM -depth -type f -iname ".*" -exec rm {} \;
+                                find "$SD_MOUNTPOINT"/DCIM/* -depth -type d -exec rmdir {} \;
+                                echo "SD copy complete" >> /tmp/usb_add_info
+                        else
+                                echo "Didn't finish moving files from incoming" >> /tmp/usb_add_info
+                        fi
                 else
-                        echo "Didn't finish moving files from incoming" >> /tmp/usb_add_info
+                        echo "No new files found on SD Card" >> /tmp/usb_add_info
                 fi
         else
                 echo "SD copy was interrupted" >> /tmp/usb_add_info
@@ -210,6 +217,7 @@ cat <<'EOF' >> /etc/udev/script/remove_usb_storage.sh
 # Kill the rsync process if the USB drive or SD card is removed
 if [ -e /tmp/backup.pid ]; then
         kill $(cat /tmp/backup.pid)
+        killall rsync
         rm /tmp/backup.pid
 fi
 
@@ -238,20 +246,30 @@ EOF
 # Add a swapfile on the data store drive 
 # (rsync needs this for large file copies)
 
+sed -i 's/SWAP=noswap/SWAP=swap/' /etc/firmware
+
 cat <<'EOF' > /etc/init.d/swap
 STORE_DIR=/monitoreo
 CONFIG_DIR="$STORE_DIR"/no_tocar
+rm -f /tmp/swapinfo
 
 while read device mountpoint fstype remainder; do
     if [ ${device:0:7} == "/dev/sd" -a -e "$mountpoint$CONFIG_DIR" ];then
-            local swapfile
             swapfile="$mountpoint$CONFIG_DIR"/swapfile
             if [ ! -e "$swapfile" ]; then
                 dd if=/dev/zero of="$swapfile" bs=1024 count=65536
+                echo "Creating swapfile $swapfile" >> /tmp/swapinfo
             fi
-            swapon "$swapfile"
+            swapon "$swapfile" >> /tmp/swapinfo 2>&1
+            if [ $? -eq 0 ]; then
+                echo "Turned on swap for $swapfile" >> /tmp/swapinfo
+            else
+                echo "There was an error turning on swap" >> /tmp/swapinfo
+            fi
+            exit 0
     fi
 done < /proc/mounts
+exit 0
 EOF
 #Persist configuration changes
 /usr/sbin/etc_tools p
