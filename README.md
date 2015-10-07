@@ -102,6 +102,6 @@ We are using [ODK Collect](http://opendatakit.org/use/collect/) for data collect
 
 2. Write a small CGI script that can run on the RavPower to accept a multi-part form submission (containing form XML and associated media/photos). It would need to rename the files with the form submission UUID. Could face memory and processing speed limitations.
 
-3. Transfer the data via a USB connection. Android >4.0 only connects via MTP, which varies in implmentation in Android. The best seems to be [go-mtpfs](https://github.com/hanwen/go-mtpfs) which would need to be cross-compiled with GO for MIPS archetecture, which seems is possible. All libraries would need to be statically linked. This is potentially the most reliable solution.
+3. Transfer the data via a USB connection. Android >4.0 only connects via MTP, which varies in implmentation in Android. The best seems to be [go-mtpfs](https://github.com/hanwen/go-mtpfs) which would need to be cross-compiled with GO for MIPS architecture, which seems is possible. All libraries would need to be statically linked. This is potentially the most reliable solution.
 
  
