@@ -3,14 +3,25 @@ RAVPower Automation
 
 This collection of scripts automate functionality for copying and backing up files using a [RAVPower Filehub](http://www.ravpower.com/ravpower-rp-wd01-filehub-3000mah-power-bank.html).
 
-- [x] Change the default password
-- [x] Block external network access
-- [x] Copy files from SD Card to USB drive automatically
-- [ ] Rename & organize files using EXIF data
-- [x] Backup / sync between two USB drives
-- [x] Add a swap file on a USB drive
-- [ ] Allow import of [ODK Collect](http://opendatakit.org/use/collect/) data from smart phones over USB
-- [ ] Allow import of [ODK Collect](http://opendatakit.org/use/collect/) data from smart phones over wifi
+I forked [the original repository](https://github.com/digidem/filehub-config) to fit my needs.
+Some of these changes are specific to Sony SD card file system (I'm using a Sony A7III).
+
+Here are my changes:
+- Logging:
+  - Centralize logging in the same file located on the hard disk (instead of local `/tmp` directory)
+  - Put the date in the logging filename
+  - Include the date on each logging line
+  - Add logging on `swap.sh`
+- Swap:
+  - Increase swap file size
+  - Fix the swap creation (add the missing `mkswap`)
+- Features:
+  - Remove the backup between two USB hard drives as I don't need it and my FileHub only have 1 USB port
+  - Remove `MEDIA_REGEX` as I want to avoid removing wrong files by mistake
+  - Remove files from SD card when copied (using `--remove-source-files` option of rsync)
+  - Backup video as well (`PRIVATE` directory)
+- Rename some paths and files
+
 
 How to hack the Filehub embedded Linux
 --------------------------------------
@@ -27,7 +38,7 @@ Building from source
 --------------------
 
 ```shell
-git clone https://github.com/digidem/filehub-config.git
+git clone https://github.com/m42u/filehub-config
 make
 ```
 
@@ -60,7 +71,7 @@ By default it is possible to telnet into the Filehub from an external network if
 Copy files from SD card automatically
 -------------------------------------
 
-The script runs when any USB device is attached. It checks whether an SD card is present, and it looks for an external USB drive (can be a thumb drive or a USB disk drive) with a folder `/monitoreo/config` which contains an [rsync](http://rsync.samba.org/) binary built for embedded linux. There is not enough memory on the filehub device to store the rsync binary on the device itself.
+The script runs when any USB device is attached. It checks whether an SD card is present, and it looks for an external USB drive (can be a thumb drive or a USB disk drive) with a folder `/filehub/config` which contains an [rsync](http://rsync.samba.org/) binary built for embedded linux. There is not enough memory on the filehub device to store the rsync binary on the device itself.
 
 The script uses rsync to copy files, which should be resilient to interuption mid-copy and resume where it left off. Source files are removed from the SD card as they are copied to the external drive.
 
@@ -70,23 +81,10 @@ If more than 9999 photos are taken with a camera, filenames will be reused. Simi
 
 When the SD card or USB drive is removed, we kill the rsync process, otherwise it hangs around.
 
-Backup between two USB hard drives
-----------------------------------
-
-If a second drive is attached with a folder "Backup" then an automatic backup process will begin. Each backup drive is linked to the original drive via the original drive serial number. e.g. if you have two drives with original files and one backup drive for each, it will not backup to the wrong drive because it will detect the serial. The link is created the first time you create the backup, by writing a file ".backup_id" to the backup folder.
-
-At this stage older versions and deleted files are not kept. The backup drive is an exact mirror of the original drive. Backups are created via rsync with the following command:
-
-```sh
-rsync -vrm --size-only --delete-during --exclude ".?*" --partial-dir "$partial_dir" --exclude "swapfile" --log-file /tmp/rsync_log "$source_dir"/ "$target_dir"
-```
-
-Comments and suggestions for the rsync options are most welcome!
-
 Swap file
 ---------
 
-The RavPower Filehub only has 28Mb of memory, and about 2Mb of free memory. Rsync needs around [100 bytes for each file](http://rsync.samba.org/FAQ.html#4). To avoid out of memory issues we create a 64Mb swapfile on the USB drive when it is connected. This appears to speed up rsync and *should* avoid memory issues. I have not yet tested with thousands of files.
+The RavPower Filehub only has 28Mb of memory, and about 2Mb of free memory. Rsync needs around [100 bytes for each file](http://rsync.samba.org/FAQ.html#4). To avoid out of memory issues we create a 128Mb swapfile on the USB drive when it is connected. This appears to speed up rsync and *should* avoid memory issues. I have not yet tested with thousands of files.
 
 Renaming with EXIF
 ------------------
@@ -104,4 +102,8 @@ We are using [ODK Collect](http://opendatakit.org/use/collect/) for data collect
 
 3. Transfer the data via a USB connection. Android >4.0 only connects via MTP, which varies in implmentation in Android. The best seems to be [go-mtpfs](https://github.com/hanwen/go-mtpfs) which would need to be cross-compiled with GO for MIPS architecture, which seems is possible. All libraries would need to be statically linked. This is potentially the most reliable solution.
 
- 
+TODO
+----
+
+- Test with a GoPro SD card and adapt `rsync` commands accordingly
+- Test if, when an unexpected interruption occurs during the rsync process (shutdown of the FileHub, SD card or hard disk unplugged), rsync resume and all files are properly copied.

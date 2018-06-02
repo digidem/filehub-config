@@ -5,7 +5,7 @@
 sed -i '/#START_MOD/,/#END_MOD/d' /etc/udev/script/remove_usb_storage.sh
 
 # Add call to usb backup script after drive mounts
-cat <<'EOF' >> /etc/udev/script/remove_usb_storage.sh 
+cat <<'EOF' >> /etc/udev/script/remove_usb_storage.sh
 #START_MOD
 # Kill the rsync process if the USB drive or SD card is removed
 if [ -e /tmp/backup.pid ]; then
@@ -15,8 +15,8 @@ if [ -e /tmp/backup.pid ]; then
 fi
 
 # Turn off swap if the store drive is removed
-STORE_DIR=/monitoreo
-CONFIG_DIR="$STORE_DIR"/no_tocar
+STORE_DIR=/filehub
+CONFIG_DIR="$STORE_DIR"/config
 
 # Check if a USB drive is attached which is initialize for storing monitoring data
 check_storedrive() {
